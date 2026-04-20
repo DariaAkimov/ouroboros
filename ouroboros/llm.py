@@ -118,7 +118,6 @@ class LLMClient:
         self._base_url = base_url
         self._client = None
         self._enable_langfuse = enable_langfuse
-        self._langfuse_handler = None
         from langfuse import Langfuse
         if self._enable_langfuse:
             self._langfuse_handler = Langfuse(
@@ -131,7 +130,6 @@ class LLMClient:
         if self._client is None:
             # from openai import OpenAI
             from langfuse.openai import OpenAI
-            
             self._client = OpenAI(
                 base_url=self._base_url,
                 api_key=self._api_key,
@@ -209,8 +207,7 @@ class LLMClient:
             kwargs["tool_choice"] = tool_choice
 
         resp = client.chat.completions.create(**kwargs)
-        if self._langfuse_handler:
-            self._langfuse_handler.flush()
+        self._langfuse_handler.flush()
         resp_dict = resp.model_dump()
         usage = resp_dict.get("usage") or {}
         choices = resp_dict.get("choices") or [{}]
