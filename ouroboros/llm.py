@@ -110,14 +110,24 @@ class LLMClient:
         api_key: Optional[str] = None,
         base_url: str = "https://api.deepseek.com/v1",
         # base_url: str = "https://openrouter.ai/api/v1",
+        enable_langfuse: bool = True
     ):
         self._api_key = api_key or os.environ.get("OPENROUTER_API_KEY", "")
+        self._api_lg_public_key = os.environ.get("LANGFUSE_PUBLIC_KEY", "")
+        self._api_lg_secret_key = os.environ.get("LANGFUSE_SECRET_KEY", "")
         self._base_url = base_url
         self._client = None
+        self._enable_langfuse = enable_langfuse
+        self._langfuse_handler = None
 
     def _get_client(self):
         if self._client is None:
-            from openai import OpenAI
+            # from openai import OpenAI
+            from langfuse.openai import OpenAI
+            from langfuse import Langfuse
+            self._langfuse_handler = Langfuse(public_key = self._api_lg_public_key,
+                                             secret_key = self._api_lg_secret_key,
+                                             base_url = "https://cloud.langfuse.com")
             self._client = OpenAI(
                 base_url=self._base_url,
                 api_key=self._api_key,
@@ -195,6 +205,8 @@ class LLMClient:
             kwargs["tool_choice"] = tool_choice
 
         resp = client.chat.completions.create(**kwargs)
+        if self._langfuse_handler:
+            self._langfuse_handler.flush()
         resp_dict = resp.model_dump()
         usage = resp_dict.get("usage") or {}
         choices = resp_dict.get("choices") or [{}]
@@ -276,6 +288,8 @@ class LLMClient:
             reasoning_effort=reasoning_effort,
             max_tokens=max_tokens,
         )
+        if self._langfuse_handler:
+            self._langfuse_handler.flush()
         text = response_msg.get("content") or ""
         return text, usage
 
