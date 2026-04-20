@@ -119,15 +119,19 @@ class LLMClient:
         self._client = None
         self._enable_langfuse = enable_langfuse
         self._langfuse_handler = None
+        from langfuse import Langfuse
+        if self._enable_langfuse:
+            self._langfuse_handler = Langfuse(
+                public_key=os.environ.get("LANGFUSE_PUBLIC_KEY", ""),
+                secret_key=os.environ.get("LANGFUSE_SECRET_KEY", ""),
+                base_url="https://cloud.langfuse.com"
+            )
 
     def _get_client(self):
         if self._client is None:
             # from openai import OpenAI
             from langfuse.openai import OpenAI
-            from langfuse import Langfuse
-            self._langfuse_handler = Langfuse(public_key = self._api_lg_public_key,
-                                             secret_key = self._api_lg_secret_key,
-                                             base_url = "https://cloud.langfuse.com")
+            
             self._client = OpenAI(
                 base_url=self._base_url,
                 api_key=self._api_key,
