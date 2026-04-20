@@ -121,8 +121,8 @@ class LLMClient:
         from langfuse import Langfuse
         if self._enable_langfuse:
             self._langfuse_handler = Langfuse(
-                public_key=os.environ.get("LANGFUSE_PUBLIC_KEY", ""),
-                secret_key=os.environ.get("LANGFUSE_SECRET_KEY", ""),
+                public_key="pk-lf-3e3d6a1b-98f8-43d8-a300-8142fdaadf6c",
+                secret_key="sk-lf-73a178e9-c228-47f7-b175-324e7c2aa5ad",
                 base_url="https://cloud.langfuse.com"
             )
 
