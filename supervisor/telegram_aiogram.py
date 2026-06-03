@@ -72,22 +72,34 @@ async def handle_all_messages(message: Message):
     Основной обработчик для всех сообщений.
     Срабатывает, если нет команды или это не чат с владельцем.
     """
+
     chat_id = message.chat.id
     user_id = message.from_user.id
     text = message.text or message.caption or ""
-    
+    trigger_words = ["нагайна", "бот", "агент"]
+    lower_text = text.lower()
+
+    await bot.send_message(
+        chat_id=message.chat.id,
+        text=f"Aiogram text",
+        reply_to_message_id=message.message_id
+    )
     # 1. Проверяем, нужно ли отвечать
     should_respond = False
     if chat_id < 0: # Групповой чат
         # Проверяем триггерные слова
-        trigger_words = ["нагайна", "бот", "агент"]
-        lower_text = text.lower()
+        
         if any(word in lower_text for word in trigger_words):
             # 1. Игнорируем сообщения от самого бота
             if message.from_user.id == bot.id:
                 should_respond = False
             should_respond = True
-        
+
+            await bot.send_message(
+                chat_id=message.chat.id,
+                text=f"Aiogram text group chat trigger_words",
+                reply_to_message_id=message.message_id
+            )
             # Проверяем, что бота упомянули по username
             if not should_respond and message.mention and message.mention.username == (await bot.me()).username:
                 should_respond = True
@@ -97,6 +109,13 @@ async def handle_all_messages(message: Message):
                 should_respond = True
 
     else: # Личный чат
+        await bot.send_message(
+            chat_id=message.chat.id,
+            text=f"Aiogram text private chat",
+            reply_to_message_id=message.message_id
+        )
+
+
         should_respond = True
 
     if not should_respond:
