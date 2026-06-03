@@ -86,7 +86,7 @@ async def handle_all_messages(message: Message):
     )
     # 1. Проверяем, нужно ли отвечать
     should_respond = False
-    if chat_id < 0: # Групповой чат
+    if chat_id: # Групповой чат
         # Проверяем триггерные слова
         
         if any(word in lower_text for word in trigger_words):
@@ -108,19 +108,6 @@ async def handle_all_messages(message: Message):
             if not should_respond and message.reply_to_message and message.reply_to_message.from_user.id == (await bot.me()).id:
                 should_respond = True
 
-    else: # Личный чат
-        await bot.send_message(
-            chat_id=message.chat.id,
-            text=f"Aiogram text private chat",
-            reply_to_message_id=message.message_id
-        )
-
-
-        should_respond = True
-
-    if not should_respond:
-        return
-
     # 2. Логика занятости и обработки сообщения
     # if busy_chats.get(chat_id, False):
     #     # Если бот занят в этом чате, сообщим об этом
@@ -129,29 +116,30 @@ async def handle_all_messages(message: Message):
 
     # # Говорим, что взяли в работу
     # busy_chats[chat_id] = True
-    await message.reply("✅ Взял в работу!")
+    if should_respond:
+        await message.reply("✅ Взял в работу!")
 
-    try:
-        # 3. Вызываем основного агента Ouroboros
-        # Обратите внимание: handle_chat_direct - синхронная функция.
-        # Запускаем её в отдельном потоке, чтобы не блокировать aiogram.
-        loop = asyncio.get_event_loop()
-        # Передаем chat_id, текст и изображение (если есть)
-        # handle_chat_direct должна быть адаптирована для работы с aiogram
-        await loop.run_in_executor(None, handle_chat_direct, chat_id, text, None)
-        
-        # 4. Отправка ответа от агента (логика ответа на сообщение)
-        # Здесь мы ожидаем, что handle_chat_direct сохранит результат в какое-то место.
-        # Для простоты пока отправим фиктивный ответ.
-        # В реальности нужно дождаться ответа от LLM.
-        final_answer = "Это ответ от агента."
-        await message.reply(final_answer, reply_to_message_id=message.message_id)
-        
-    except Exception as e:
-        log.error(f"Failed to process message in chat {chat_id}: {e}")
-        await message.reply("😵 Произошла внутренняя ошибка. Проверьте логи.")
-    finally:
-        busy_chats[chat_id] = False
+        try:
+            # 3. Вызываем основного агента Ouroboros
+            # Обратите внимание: handle_chat_direct - синхронная функция.
+            # Запускаем её в отдельном потоке, чтобы не блокировать aiogram.
+            loop = asyncio.get_event_loop()
+            # Передаем chat_id, текст и изображение (если есть)
+            # handle_chat_direct должна быть адаптирована для работы с aiogram
+            await loop.run_in_executor(None, handle_chat_direct, chat_id, text, None)
+            
+            # 4. Отправка ответа от агента (логика ответа на сообщение)
+            # Здесь мы ожидаем, что handle_chat_direct сохранит результат в какое-то место.
+            # Для простоты пока отправим фиктивный ответ.
+            # В реальности нужно дождаться ответа от LLM.
+            final_answer = "Это ответ от агента."
+            await message.reply(final_answer, reply_to_message_id=message.message_id)
+            
+        except Exception as e:
+            log.error(f"Failed to process message in chat {chat_id}: {e}")
+            await message.reply("😵 Произошла внутренняя ошибка. Проверьте логи.")
+        finally:
+            busy_chats[chat_id] = False
 
 async def main():
     """Основная функция для запуска поллинга."""
