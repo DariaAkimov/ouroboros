@@ -81,7 +81,7 @@ async def handle_all_messages(message: Message):
 
     await bot.send_message(
         chat_id=message.chat.id,
-        text=f"CHAT INFO:\n\n{str(message)}",
+        text=f"CHAT INFO:\n\nid: {message.chat.id} \n\ntype: {message.type} ",
         reply_to_message_id=message.message_id
     )
     # 1. Проверяем, нужно ли отвечать
