@@ -81,7 +81,7 @@ async def handle_all_messages(message: Message):
 
     await bot.send_message(
         chat_id=message.chat.id,
-        text=f"Aiogram text",
+        text=f" CHAT INFO:\n\n\{str(message)}",
         reply_to_message_id=message.message_id
     )
     # 1. Проверяем, нужно ли отвечать
