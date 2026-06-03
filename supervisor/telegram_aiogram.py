@@ -79,11 +79,11 @@ async def handle_all_messages(message: Message):
     trigger_words = ["нагайна", "бот", "агент"]
     lower_text = text.lower()
 
-    await bot.send_message(
-        chat_id=message.chat.id,
-        text=f"CHAT INFO:\n\nid: {message.chat.id} \n\ntype: {message.chat.type} ",
-        reply_to_message_id=message.message_id
-    )
+    # await bot.send_message(
+    #     chat_id=message.chat.id,
+    #     text=f"CHAT INFO:\n\nid: {message.chat.id} \n\ntype: {message.chat.type} ",
+    #     reply_to_message_id=message.message_id
+    # )
     # 1. Проверяем, нужно ли отвечать
     should_respond = False
         # Проверяем триггерные слова
@@ -93,11 +93,11 @@ async def handle_all_messages(message: Message):
             should_respond = False
         should_respond = True
 
-        await bot.send_message(
-            chat_id=message.chat.id,
-            text=f"Aiogram text group chat trigger_words",
-            reply_to_message_id=message.message_id
-        )
+        # await bot.send_message(
+        #     chat_id=message.chat.id,
+        #     text=f"Aiogram text group chat trigger_words",
+        #     reply_to_message_id=message.message_id
+        # )
         # Проверяем, что бота упомянули по username
         if not should_respond and message.mention and message.mention.username == (await bot.me()).username:
             should_respond = True
@@ -124,13 +124,13 @@ async def handle_all_messages(message: Message):
             loop = asyncio.get_event_loop()
             # Передаем chat_id, текст и изображение (если есть)
             # handle_chat_direct должна быть адаптирована для работы с aiogram
-            await loop.run_in_executor(None, handle_chat_direct, chat_id, text, None)
+            await loop.run_in_executor(None, handle_chat_direct, chat_id, f"Message from {message.from_user.username}:\n{text}", None)
             
             # 4. Отправка ответа от агента (логика ответа на сообщение)
             # Здесь мы ожидаем, что handle_chat_direct сохранит результат в какое-то место.
             # Для простоты пока отправим фиктивный ответ.
             # В реальности нужно дождаться ответа от LLM.
-            final_answer = "Это ответ от агента."
+            final_answer = "Ответ готов"
             await message.reply(final_answer, reply_to_message_id=message.message_id)
             
         except Exception as e:
