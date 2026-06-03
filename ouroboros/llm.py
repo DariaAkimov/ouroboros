@@ -11,10 +11,15 @@ import logging
 import os
 import time
 from typing import Any, Dict, List, Optional, Tuple
+from langfuse.langchain import CallbackHandler
+LANGFUSE_PUBLIC_KEY = os.environ.get("LANGFUSE_PUBLIC_KEY", "")
+LANGFUSE_SECRET_KEY = os.environ.get("LANGFUSE_SECRET_KEY", "")
+
+langfuse_handler = CallbackHandler()
 
 log = logging.getLogger(__name__)
 
-DEFAULT_LIGHT_MODEL = "google/gemini-3-pro-preview"
+DEFAULT_LIGHT_MODEL = "deepseek-v4-flash"
 
 
 def normalize_reasoning_effort(value: str, default: str = "medium") -> str:
@@ -108,7 +113,7 @@ class LLMClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        base_url: str = "https://openrouter.ai/api/v1",
+        base_url: str = "https://api.deepseek.com",
     ):
         self._api_key = api_key or os.environ.get("OPENROUTER_API_KEY", "")
         self._base_url = base_url
@@ -193,7 +198,7 @@ class LLMClient:
             kwargs["tools"] = tools_with_cache
             kwargs["tool_choice"] = tool_choice
 
-        resp = client.chat.completions.create(**kwargs)
+        resp = client.chat.completions.create(**kwargs, callbacks=[langfuse_handler])
         resp_dict = resp.model_dump()
         usage = resp_dict.get("usage") or {}
         choices = resp_dict.get("choices") or [{}]
