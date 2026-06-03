@@ -86,27 +86,25 @@ async def handle_all_messages(message: Message):
     )
     # 1. Проверяем, нужно ли отвечать
     should_respond = False
-    if chat_id: # Групповой чат
         # Проверяем триггерные слова
-        
-        if any(word in lower_text for word in trigger_words):
-            # 1. Игнорируем сообщения от самого бота
-            if message.from_user.id == bot.id:
-                should_respond = False
+    if any(word in lower_text for word in trigger_words):
+        # 1. Игнорируем сообщения от самого бота
+        if message.from_user.id == bot.id:
+            should_respond = False
+        should_respond = True
+
+        await bot.send_message(
+            chat_id=message.chat.id,
+            text=f"Aiogram text group chat trigger_words",
+            reply_to_message_id=message.message_id
+        )
+        # Проверяем, что бота упомянули по username
+        if not should_respond and message.mention and message.mention.username == (await bot.me()).username:
             should_respond = True
 
-            await bot.send_message(
-                chat_id=message.chat.id,
-                text=f"Aiogram text group chat trigger_words",
-                reply_to_message_id=message.message_id
-            )
-            # Проверяем, что бота упомянули по username
-            if not should_respond and message.mention and message.mention.username == (await bot.me()).username:
-                should_respond = True
-
-            # Опционально: проверка на reply к сообщению бота
-            if not should_respond and message.reply_to_message and message.reply_to_message.from_user.id == (await bot.me()).id:
-                should_respond = True
+        # Опционально: проверка на reply к сообщению бота
+        if not should_respond and message.reply_to_message and message.reply_to_message.from_user.id == (await bot.me()).id:
+            should_respond = True
 
     # 2. Логика занятости и обработки сообщения
     # if busy_chats.get(chat_id, False):
