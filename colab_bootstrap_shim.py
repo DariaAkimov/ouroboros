@@ -53,7 +53,7 @@ GITHUB_USER = os.environ.get("GITHUB_USER", "").strip()
 GITHUB_REPO = os.environ.get("GITHUB_REPO", "").strip()
 assert GITHUB_USER, "GITHUB_USER not set. Add it to your config cell (see README)."
 assert GITHUB_REPO, "GITHUB_REPO not set. Add it to your config cell (see README)."
-BOOT_BRANCH = str(os.environ.get("OUROBOROS_BOOT_BRANCH", "ouroboros"))
+BOOT_BRANCH = str(os.environ.get("OUROBOROS_BOOT_BRANCH", "legacy-google-colab"))
 
 REPO_DIR = pathlib.Path("/content/drive/MyDrive/ouroboros_dev").resolve()
 REMOTE_URL = f"https://{GITHUB_TOKEN}:x-oauth-basic@github.com/{GITHUB_USER}/{GITHUB_REPO}.git"
