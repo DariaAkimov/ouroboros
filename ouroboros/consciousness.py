@@ -189,95 +189,96 @@ class BackgroundConsciousness:
         all_pending_events = []  # Accumulate events across all tool calls
 
         try:
-            for round_idx in range(1, self._MAX_BG_ROUNDS + 1):
-                if self._paused:
-                    break
-                msg, usage = self._llm.chat(
-                    messages=messages,
-                    model=model,
-                    tools=tools,
-                    reasoning_effort="low",
-                    max_tokens=2048,
-                )
-                cost = float(usage.get("cost") or 0)
-                total_cost += cost
-                self._bg_spent_usd += cost
+            pass
+            # for round_idx in range(1, self._MAX_BG_ROUNDS + 1):
+            #     if self._paused:
+            #         break
+            #     msg, usage = self._llm.chat(
+            #         messages=messages,
+            #         model=model,
+            #         tools=tools,
+            #         reasoning_effort="low",
+            #         max_tokens=2048,
+            #     )
+            #     cost = float(usage.get("cost") or 0)
+            #     total_cost += cost
+            #     self._bg_spent_usd += cost
 
-                # Write BG spending to global state so it's visible in budget tracking
-                try:
-                    from supervisor.state import update_budget_from_usage
-                    update_budget_from_usage({
-                        "cost": cost, "rounds": 1,
-                        "prompt_tokens": usage.get("prompt_tokens", 0),
-                        "completion_tokens": usage.get("completion_tokens", 0),
-                        "cached_tokens": usage.get("cached_tokens", 0),
-                    })
-                except Exception:
-                    log.debug("Failed to update global budget from BG consciousness", exc_info=True)
+            #     # Write BG spending to global state so it's visible in budget tracking
+            #     try:
+            #         from supervisor.state import update_budget_from_usage
+            #         update_budget_from_usage({
+            #             "cost": cost, "rounds": 1,
+            #             "prompt_tokens": usage.get("prompt_tokens", 0),
+            #             "completion_tokens": usage.get("completion_tokens", 0),
+            #             "cached_tokens": usage.get("cached_tokens", 0),
+            #         })
+            #     except Exception:
+            #         log.debug("Failed to update global budget from BG consciousness", exc_info=True)
 
-                # Budget check between rounds
-                if not self._check_budget():
-                    append_jsonl(self._drive_root / "logs" / "events.jsonl", {
-                        "ts": utc_now_iso(),
-                        "type": "bg_budget_exceeded_mid_cycle",
-                        "round": round_idx,
-                    })
-                    break
+            #     # Budget check between rounds
+            #     if not self._check_budget():
+            #         append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+            #             "ts": utc_now_iso(),
+            #             "type": "bg_budget_exceeded_mid_cycle",
+            #             "round": round_idx,
+            #         })
+            #         break
 
-                # Report usage to supervisor
-                if self._event_queue is not None:
-                    self._event_queue.put({
-                        "type": "llm_usage",
-                        "provider": "openrouter",
-                        "usage": usage,
-                        "source": "consciousness",
-                        "ts": utc_now_iso(),
-                        "category": "consciousness",
-                    })
+            #     # Report usage to supervisor
+            #     if self._event_queue is not None:
+            #         self._event_queue.put({
+            #             "type": "llm_usage",
+            #             "provider": "openrouter",
+            #             "usage": usage,
+            #             "source": "consciousness",
+            #             "ts": utc_now_iso(),
+            #             "category": "consciousness",
+            #         })
 
-                content = msg.get("content") or ""
-                tool_calls = msg.get("tool_calls") or []
+            #     content = msg.get("content") or ""
+            #     tool_calls = msg.get("tool_calls") or []
 
-                if self._paused:
-                    break
+            #     if self._paused:
+            #         break
 
-                # If we have content but no tool calls, we're done
-                if content and not tool_calls:
-                    final_content = content
-                    break
+            #     # If we have content but no tool calls, we're done
+            #     if content and not tool_calls:
+            #         final_content = content
+            #         break
 
-                # If we have tool calls, execute them and continue loop
-                if tool_calls:
-                    messages.append(msg)
-                    for tc in tool_calls:
-                        result = self._execute_tool(tc, all_pending_events)
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tc.get("id", ""),
-                            "content": result,
-                        })
-                    continue
+            #     # If we have tool calls, execute them and continue loop
+            #     if tool_calls:
+            #         messages.append(msg)
+            #         for tc in tool_calls:
+            #             result = self._execute_tool(tc, all_pending_events)
+            #             messages.append({
+            #                 "role": "tool",
+            #                 "tool_call_id": tc.get("id", ""),
+            #                 "content": result,
+            #             })
+            #         continue
 
-                # If neither content nor tool_calls, stop
-                break
+            #     # If neither content nor tool_calls, stop
+            #     break
 
-            # Forward or defer accumulated events
-            if all_pending_events and self._event_queue is not None:
-                if self._paused:
-                    self._deferred_events.extend(all_pending_events)
-                else:
-                    for evt in all_pending_events:
-                        self._event_queue.put(evt)
+            # # Forward or defer accumulated events
+            # if all_pending_events and self._event_queue is not None:
+            #     if self._paused:
+            #         self._deferred_events.extend(all_pending_events)
+            #     else:
+            #         for evt in all_pending_events:
+            #             self._event_queue.put(evt)
 
-            # Log the thought with round count
-            append_jsonl(self._drive_root / "logs" / "events.jsonl", {
-                "ts": utc_now_iso(),
-                "type": "consciousness_thought",
-                "thought_preview": (final_content or "")[:300],
-                "cost_usd": total_cost,
-                "rounds": round_idx,
-                "model": model,
-            })
+            # # Log the thought with round count
+            # append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+            #     "ts": utc_now_iso(),
+            #     "type": "consciousness_thought",
+            #     "thought_preview": (final_content or "")[:300],
+            #     "cost_usd": total_cost,
+            #     "rounds": round_idx,
+            #     "model": model,
+            # })
 
         except Exception as e:
             append_jsonl(self._drive_root / "logs" / "events.jsonl", {
