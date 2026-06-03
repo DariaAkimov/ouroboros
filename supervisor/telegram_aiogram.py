@@ -82,18 +82,19 @@ async def handle_all_messages(message: Message):
         # Проверяем триггерные слова
         trigger_words = ["нагайна", "бот", "агент"]
         lower_text = text.lower()
-        for word in trigger_words:
-            if word in lower_text:
-                should_respond = True
-                break
+        if any(word in lower_text for word in trigger_words):
+            # 1. Игнорируем сообщения от самого бота
+            if message.from_user.id == bot.id:
+                should_respond = False
+            should_respond = True
         
-        # Проверяем, что бота упомянули по username
-        if not should_respond and message.mention and message.mention.username == (await bot.me()).username:
-            should_respond = True
+            # Проверяем, что бота упомянули по username
+            if not should_respond and message.mention and message.mention.username == (await bot.me()).username:
+                should_respond = True
 
-        # Опционально: проверка на reply к сообщению бота
-        if not should_respond and message.reply_to_message and message.reply_to_message.from_user.id == (await bot.me()).id:
-            should_respond = True
+            # Опционально: проверка на reply к сообщению бота
+            if not should_respond and message.reply_to_message and message.reply_to_message.from_user.id == (await bot.me()).id:
+                should_respond = True
 
     else: # Личный чат
         should_respond = True
