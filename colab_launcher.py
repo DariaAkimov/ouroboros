@@ -7,6 +7,7 @@
 import logging
 import os, sys, json, time, uuid, pathlib, subprocess, datetime, threading, queue as _queue_mod
 from typing import Any, Dict, List, Optional, Set, Tuple
+import types
 
 log = logging.getLogger(__name__)
 
