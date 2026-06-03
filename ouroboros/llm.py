@@ -12,8 +12,10 @@ import os
 import time
 from typing import Any, Dict, List, Optional, Tuple
 from langfuse.langchain import CallbackHandler
+from langfuse import observe
 LANGFUSE_PUBLIC_KEY = os.environ.get("LANGFUSE_PUBLIC_KEY", "")
 LANGFUSE_SECRET_KEY = os.environ.get("LANGFUSE_SECRET_KEY", "")
+LANGFUSE_BASE_URL = "https://cloud.langfuse.com"
 
 langfuse_handler = CallbackHandler()
 
@@ -155,7 +157,7 @@ class LLMClient:
             log.debug("Failed to fetch generation cost from OpenRouter", exc_info=True)
             pass
         return None
-
+    @observe
     def chat(
         self,
         messages: List[Dict[str, Any]],
@@ -198,7 +200,7 @@ class LLMClient:
             kwargs["tools"] = tools_with_cache
             kwargs["tool_choice"] = tool_choice
 
-        resp = client.chat.completions.create(**kwargs, callbacks=[langfuse_handler])
+        resp = client.chat.completions.create(**kwargs)
         resp_dict = resp.model_dump()
         usage = resp_dict.get("usage") or {}
         choices = resp_dict.get("choices") or [{}]
