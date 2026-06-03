@@ -405,29 +405,29 @@ def generate_evolution_stats() -> str:
     )
 
 
-def get_tools():
-    """Auto-discovery entry point for ToolRegistry."""
-    from ouroboros.tools.registry import ToolEntry
+# def get_tools():
+#     """Auto-discovery entry point for ToolRegistry."""
+#     from ouroboros.tools.registry import ToolEntry
 
-    return [
-        ToolEntry(
-            "generate_evolution_stats",
-            {
-                "name": "generate_evolution_stats",
-                "description": (
-                    "Generate Evolution Time-Lapse data from git history and push to the webapp dashboard. "
-                    "Collects per-commit metrics across three axes: "
-                    "Technical (Python lines of code), Philosophical (BIBLE.md size), "
-                    "Self-Concept (SYSTEM.md size). "
-                    "Pushes docs/evolution.json via GitHub API. "
-                    "Safe to call anytime; takes 15-30s for full history scan."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                },
-            },
-            lambda ctx, **_: generate_evolution_stats(),
-        )
-    ]
+#     return [
+#         ToolEntry(
+#             "generate_evolution_stats",
+#             {
+#                 "name": "generate_evolution_stats",
+#                 "description": (
+#                     "Generate Evolution Time-Lapse data from git history and push to the webapp dashboard. "
+#                     "Collects per-commit metrics across three axes: "
+#                     "Technical (Python lines of code), Philosophical (BIBLE.md size), "
+#                     "Self-Concept (SYSTEM.md size). "
+#                     "Pushes docs/evolution.json via GitHub API. "
+#                     "Safe to call anytime; takes 15-30s for full history scan."
+#                 ),
+#                 "parameters": {
+#                     "type": "object",
+#                     "properties": {},
+#                     "required": [],
+#                 },
+#             },
+#             lambda ctx, **_: generate_evolution_stats(),
+#         )
+#     ]

@@ -239,22 +239,22 @@ def _claude_code_edit(ctx: ToolContext, prompt: str, cwd: str = "") -> str:
     return _parse_claude_output(stdout, ctx)
 
 
-def get_tools() -> List[ToolEntry]:
-    return [
-        ToolEntry("run_shell", {
-            "name": "run_shell",
-            "description": "Run a shell command (list of args) inside the repo. Returns stdout+stderr.",
-            "parameters": {"type": "object", "properties": {
-                "cmd": {"type": "array", "items": {"type": "string"}},
-                "cwd": {"type": "string", "default": ""},
-            }, "required": ["cmd"]},
-        }, _run_shell, is_code_tool=True),
-        ToolEntry("claude_code_edit", {
-            "name": "claude_code_edit",
-            "description": "Delegate code edits to Claude Code CLI. Preferred for multi-file changes and refactors. Follow with repo_commit_push.",
-            "parameters": {"type": "object", "properties": {
-                "prompt": {"type": "string"},
-                "cwd": {"type": "string", "default": ""},
-            }, "required": ["prompt"]},
-        }, _claude_code_edit, is_code_tool=True, timeout_sec=300),
-    ]
+# def get_tools() -> List[ToolEntry]:
+#     return [
+#         ToolEntry("run_shell", {
+#             "name": "run_shell",
+#             "description": "Run a shell command (list of args) inside the repo. Returns stdout+stderr.",
+#             "parameters": {"type": "object", "properties": {
+#                 "cmd": {"type": "array", "items": {"type": "string"}},
+#                 "cwd": {"type": "string", "default": ""},
+#             }, "required": ["cmd"]},
+#         }, _run_shell, is_code_tool=True),
+#         ToolEntry("claude_code_edit", {
+#             "name": "claude_code_edit",
+#             "description": "Delegate code edits to Claude Code CLI. Preferred for multi-file changes and refactors. Follow with repo_commit_push.",
+#             "parameters": {"type": "object", "properties": {
+#                 "prompt": {"type": "string"},
+#                 "cwd": {"type": "string", "default": ""},
+#             }, "required": ["prompt"]},
+#         }, _claude_code_edit, is_code_tool=True, timeout_sec=300),
+#     ]

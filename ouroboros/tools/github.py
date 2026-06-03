@@ -216,51 +216,51 @@ def _create_issue(ctx: ToolContext, title: str, body: str = "", labels: str = ""
 # Tool registration
 # ---------------------------------------------------------------------------
 
-def get_tools() -> List[ToolEntry]:
-    return [
-        ToolEntry("list_github_issues", {
-            "name": "list_github_issues",
-            "description": "List GitHub issues. Use to check for new tasks, bug reports, or feature requests from the creator or contributors.",
-            "parameters": {"type": "object", "properties": {
-                "state": {"type": "string", "default": "open", "enum": ["open", "closed", "all"], "description": "Filter by state"},
-                "labels": {"type": "string", "default": "", "description": "Filter by label (comma-separated)"},
-                "limit": {"type": "integer", "default": 20, "description": "Max issues to return (max 50)"},
-            }, "required": []},
-        }, _list_issues),
+# def get_tools() -> List[ToolEntry]:
+#     return [
+#         ToolEntry("list_github_issues", {
+#             "name": "list_github_issues",
+#             "description": "List GitHub issues. Use to check for new tasks, bug reports, or feature requests from the creator or contributors.",
+#             "parameters": {"type": "object", "properties": {
+#                 "state": {"type": "string", "default": "open", "enum": ["open", "closed", "all"], "description": "Filter by state"},
+#                 "labels": {"type": "string", "default": "", "description": "Filter by label (comma-separated)"},
+#                 "limit": {"type": "integer", "default": 20, "description": "Max issues to return (max 50)"},
+#             }, "required": []},
+#         }, _list_issues),
 
-        ToolEntry("get_github_issue", {
-            "name": "get_github_issue",
-            "description": "Get full details of a GitHub issue including body and comments.",
-            "parameters": {"type": "object", "properties": {
-                "number": {"type": "integer", "description": "Issue number"},
-            }, "required": ["number"]},
-        }, _get_issue),
+#         ToolEntry("get_github_issue", {
+#             "name": "get_github_issue",
+#             "description": "Get full details of a GitHub issue including body and comments.",
+#             "parameters": {"type": "object", "properties": {
+#                 "number": {"type": "integer", "description": "Issue number"},
+#             }, "required": ["number"]},
+#         }, _get_issue),
 
-        ToolEntry("comment_on_issue", {
-            "name": "comment_on_issue",
-            "description": "Add a comment to a GitHub issue. Use to respond to issues, share progress, or ask clarifying questions.",
-            "parameters": {"type": "object", "properties": {
-                "number": {"type": "integer", "description": "Issue number"},
-                "body": {"type": "string", "description": "Comment text (markdown)"},
-            }, "required": ["number", "body"]},
-        }, _comment_on_issue),
+#         ToolEntry("comment_on_issue", {
+#             "name": "comment_on_issue",
+#             "description": "Add a comment to a GitHub issue. Use to respond to issues, share progress, or ask clarifying questions.",
+#             "parameters": {"type": "object", "properties": {
+#                 "number": {"type": "integer", "description": "Issue number"},
+#                 "body": {"type": "string", "description": "Comment text (markdown)"},
+#             }, "required": ["number", "body"]},
+#         }, _comment_on_issue),
 
-        ToolEntry("close_github_issue", {
-            "name": "close_github_issue",
-            "description": "Close a GitHub issue with optional closing comment.",
-            "parameters": {"type": "object", "properties": {
-                "number": {"type": "integer", "description": "Issue number"},
-                "comment": {"type": "string", "default": "", "description": "Optional closing comment"},
-            }, "required": ["number"]},
-        }, _close_issue),
+#         ToolEntry("close_github_issue", {
+#             "name": "close_github_issue",
+#             "description": "Close a GitHub issue with optional closing comment.",
+#             "parameters": {"type": "object", "properties": {
+#                 "number": {"type": "integer", "description": "Issue number"},
+#                 "comment": {"type": "string", "default": "", "description": "Optional closing comment"},
+#             }, "required": ["number"]},
+#         }, _close_issue),
 
-        ToolEntry("create_github_issue", {
-            "name": "create_github_issue",
-            "description": "Create a new GitHub issue. Use for tracking tasks, documenting bugs, or planning features.",
-            "parameters": {"type": "object", "properties": {
-                "title": {"type": "string", "description": "Issue title"},
-                "body": {"type": "string", "default": "", "description": "Issue body (markdown)"},
-                "labels": {"type": "string", "default": "", "description": "Labels (comma-separated)"},
-            }, "required": ["title"]},
-        }, _create_issue),
-    ]
+#         ToolEntry("create_github_issue", {
+#             "name": "create_github_issue",
+#             "description": "Create a new GitHub issue. Use for tracking tasks, documenting bugs, or planning features.",
+#             "parameters": {"type": "object", "properties": {
+#                 "title": {"type": "string", "description": "Issue title"},
+#                 "body": {"type": "string", "default": "", "description": "Issue body (markdown)"},
+#                 "labels": {"type": "string", "default": "", "description": "Labels (comma-separated)"},
+#             }, "required": ["title"]},
+#         }, _create_issue),
+#     ]

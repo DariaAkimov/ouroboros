@@ -222,35 +222,35 @@ def _git_diff(ctx: ToolContext, staged: bool = False) -> str:
         return f"⚠️ GIT_ERROR: {e}"
 
 
-def get_tools() -> List[ToolEntry]:
-    return [
-        ToolEntry("repo_write_commit", {
-            "name": "repo_write_commit",
-            "description": "Write one file + commit + push to ouroboros branch. For small deterministic edits.",
-            "parameters": {"type": "object", "properties": {
-                "path": {"type": "string"},
-                "content": {"type": "string"},
-                "commit_message": {"type": "string"},
-            }, "required": ["path", "content", "commit_message"]},
-        }, _repo_write_commit, is_code_tool=True),
-        ToolEntry("repo_commit_push", {
-            "name": "repo_commit_push",
-            "description": "Commit + push already-changed files. Does pull --rebase before push.",
-            "parameters": {"type": "object", "properties": {
-                "commit_message": {"type": "string"},
-                "paths": {"type": "array", "items": {"type": "string"}, "description": "Files to add (empty = git add -A)"},
-            }, "required": ["commit_message"]},
-        }, _repo_commit_push, is_code_tool=True),
-        ToolEntry("git_status", {
-            "name": "git_status",
-            "description": "git status --porcelain",
-            "parameters": {"type": "object", "properties": {}, "required": []},
-        }, _git_status, is_code_tool=True),
-        ToolEntry("git_diff", {
-            "name": "git_diff",
-            "description": "git diff (use staged=true to see staged changes after git add)",
-            "parameters": {"type": "object", "properties": {
-                "staged": {"type": "boolean", "default": False, "description": "If true, show staged changes (--staged)"},
-            }, "required": []},
-        }, _git_diff, is_code_tool=True),
-    ]
+# def get_tools() -> List[ToolEntry]:
+#     return [
+#         ToolEntry("repo_write_commit", {
+#             "name": "repo_write_commit",
+#             "description": "Write one file + commit + push to ouroboros branch. For small deterministic edits.",
+#             "parameters": {"type": "object", "properties": {
+#                 "path": {"type": "string"},
+#                 "content": {"type": "string"},
+#                 "commit_message": {"type": "string"},
+#             }, "required": ["path", "content", "commit_message"]},
+#         }, _repo_write_commit, is_code_tool=True),
+#         ToolEntry("repo_commit_push", {
+#             "name": "repo_commit_push",
+#             "description": "Commit + push already-changed files. Does pull --rebase before push.",
+#             "parameters": {"type": "object", "properties": {
+#                 "commit_message": {"type": "string"},
+#                 "paths": {"type": "array", "items": {"type": "string"}, "description": "Files to add (empty = git add -A)"},
+#             }, "required": ["commit_message"]},
+#         }, _repo_commit_push, is_code_tool=True),
+#         ToolEntry("git_status", {
+#             "name": "git_status",
+#             "description": "git status --porcelain",
+#             "parameters": {"type": "object", "properties": {}, "required": []},
+#         }, _git_status, is_code_tool=True),
+#         ToolEntry("git_diff", {
+#             "name": "git_diff",
+#             "description": "git diff (use staged=true to see staged changes after git add)",
+#             "parameters": {"type": "object", "properties": {
+#                 "staged": {"type": "boolean", "default": False, "description": "If true, show staged changes (--staged)"},
+#             }, "required": []},
+#         }, _git_diff, is_code_tool=True),
+#     ]
