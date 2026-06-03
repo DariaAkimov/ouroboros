@@ -137,6 +137,6 @@ async def main():
     """Основная функция для запуска поллинга."""
     await dp.start_polling(bot)
 
-def run_telegram_aiogram():
-    """Функция, которую вызовем из colab_launcher.py"""
-    asyncio.run(main())
+async def run_telegram_aiogram():
+    """Запуск поллинга aiogram (без создания нового event loop)."""
+    await dp.start_polling(bot)
