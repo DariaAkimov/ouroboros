@@ -82,7 +82,6 @@ def get_cfg(name: str, default: Optional[str] = None, allow_legacy_secret: bool 
             return legacy
     return default
 
-
 def _parse_int_cfg(raw: Optional[str], default: int, minimum: int = 0) -> int:
     try:
         val = int(str(raw))
@@ -95,12 +94,11 @@ TELEGRAM_BOT_TOKEN = get_secret("TELEGRAM_BOT_TOKEN", required=True)
 TOTAL_BUDGET_DEFAULT = get_secret("TOTAL_BUDGET", required=True)
 GITHUB_TOKEN = get_secret("GITHUB_TOKEN", required=True)
 
-# Robust TOTAL_BUDGET parsing — handles \r\n, spaces, and other junk from Colab Secrets
-# Example: user enters "8 800" → Colab stores as "8\r\n800" → we need 8800
+# Robust TOTAL_BUDGET parsing
 try:
     import re
     _raw_budget = str(TOTAL_BUDGET_DEFAULT or "")
-    _clean_budget = re.sub(r'[^0-9.\-]', '', _raw_budget)  # keep only digits, dot, minus
+    _clean_budget = re.sub(r'[^0-9.\-]', '', _raw_budget)
     TOTAL_BUDGET_LIMIT = float(_clean_budget) if _clean_budget else 0.0
     if _raw_budget.strip() != _clean_budget:
         log.warning(f"TOTAL_BUDGET cleaned: {_raw_budget!r} → {TOTAL_BUDGET_LIMIT}")
@@ -165,11 +163,9 @@ REPO_DIR.mkdir(parents=True, exist_ok=True)
 # Clear stale owner mailbox files from previous session
 try:
     from ouroboros.owner_inject import get_pending_path
-    # Clean legacy global file
     _stale_inject = get_pending_path(DRIVE_ROOT)
     if _stale_inject.exists():
         _stale_inject.unlink(missing_ok=True)
-    # Clean per-task mailbox dir
     _mailbox_dir = DRIVE_ROOT / "memory" / "owner_mailbox"
     if _mailbox_dir.exists():
         for _f in _mailbox_dir.iterdir():
@@ -348,381 +344,100 @@ def reset_chat_agent():
     import supervisor.workers as _w
     _w._chat_agent = None
 
-# ----------------------------
-# 7) Main loop
-# ----------------------------
-import types
-_event_ctx = types.SimpleNamespace(
-    DRIVE_ROOT=DRIVE_ROOT,
-    REPO_DIR=REPO_DIR,
-    BRANCH_DEV=BRANCH_DEV,
-    BRANCH_STABLE=BRANCH_STABLE,
-    TG=TG,
-    WORKERS=WORKERS,
-    PENDING=PENDING,
-    RUNNING=RUNNING,
-    MAX_WORKERS=MAX_WORKERS,
-    send_with_budget=send_with_budget,
-    load_state=load_state,
-    save_state=save_state,
-    update_budget_from_usage=update_budget_from_usage,
-    append_jsonl=append_jsonl,
-    enqueue_task=enqueue_task,
-    cancel_task_by_id=cancel_task_by_id,
-    queue_review_task=queue_review_task,
-    persist_queue_snapshot=persist_queue_snapshot,
-    safe_restart=safe_restart,
-    kill_workers=kill_workers,
-    spawn_workers=spawn_workers,
-    sort_pending=sort_pending,
-    consciousness=_consciousness,
-)
+# Auto-start background consciousness (disabled by default to avoid conflicts)
+# _consciousness.start()
 
-
+# ----------------------------
+# 7) Helper functions for the async maintenance loop
+# ----------------------------
 def _safe_qsize(q: Any) -> int:
     try:
         return int(q.qsize())
     except Exception:
         return -1
 
+# ----------------------------
+# 8) Async main: background maintenance + aiogram
+# ----------------------------
+import asyncio
+from supervisor.telegram_aiogram import run_telegram_aiogram
 
-def _handle_supervisor_command(text: str, chat_id: int, tg_offset: int = 0):
-    """Handle supervisor slash-commands.
-
-    Returns:
-        True  — terminal command fully handled (caller should `continue`)
-        str   — dual-path note to prepend (caller falls through to LLM)
-        ""    — not a recognized command (falsy, caller falls through)
-    """
-    lowered = text.strip().lower()
-
-    if lowered.startswith("/panic"):
-        send_with_budget(chat_id, "🛑 PANIC: stopping everything now.")
-        kill_workers()
-        st2 = load_state()
-        st2["tg_offset"] = tg_offset
-        save_state(st2)
-        raise SystemExit("PANIC")
-
-    if lowered.startswith("/restart"):
-        st2 = load_state()
-        st2["session_id"] = uuid.uuid4().hex
-        st2["tg_offset"] = tg_offset
-        save_state(st2)
-        send_with_budget(chat_id, "♻️ Restarting (soft).")
-        ok, msg = safe_restart(reason="owner_restart", unsynced_policy="rescue_and_reset")
-        if not ok:
-            send_with_budget(chat_id, f"⚠️ Restart cancelled: {msg}")
-            return True
-        kill_workers()
-        os.execv(sys.executable, [sys.executable, __file__])
-
-    # Dual-path commands: supervisor handles + LLM sees a note
-    if lowered.startswith("/status"):
-        status = status_text(WORKERS, PENDING, RUNNING, SOFT_TIMEOUT_SEC, HARD_TIMEOUT_SEC)
-        send_with_budget(chat_id, status, force_budget=True)
-        return "[Supervisor handled /status — status text already sent to chat]\n"
-
-    if lowered.startswith("/review"):
-        queue_review_task(reason="owner:/review", force=True)
-        return "[Supervisor handled /review — review task queued]\n"
-
-    if lowered.startswith("/evolve"):
-        parts = lowered.split()
-        action = parts[1] if len(parts) > 1 else "on"
-        turn_on = action not in ("off", "stop", "0")
-        st2 = load_state()
-        st2["evolution_mode_enabled"] = bool(turn_on)
-        save_state(st2)
-        if not turn_on:
-            PENDING[:] = [t for t in PENDING if str(t.get("type")) != "evolution"]
-            sort_pending()
-            persist_queue_snapshot(reason="evolve_off")
-        state_str = "ON" if turn_on else "OFF"
-        send_with_budget(chat_id, f"🧬 Evolution: {state_str}")
-        return f"[Supervisor handled /evolve — evolution toggled {state_str}]\n"
-
-    if lowered.startswith("/bg"):
-        parts = lowered.split()
-        action = parts[1] if len(parts) > 1 else "status"
-        if action in ("start", "on", "1"):
-            result = _consciousness.start()
-            send_with_budget(chat_id, f"🧠 {result}")
-        elif action in ("stop", "off", "0"):
-            result = _consciousness.stop()
-            send_with_budget(chat_id, f"🧠 {result}")
-        else:
-            bg_status = "running" if _consciousness.is_running else "stopped"
-            send_with_budget(chat_id, f"🧠 Background consciousness: {bg_status}")
-        return f"[Supervisor handled /bg {action}]\n"
-
-    return ""
-
-
-offset = int(load_state().get("tg_offset") or 0)
-_last_diag_heartbeat_ts = 0.0
-_last_message_ts: float = time.time()  # Start in active mode after restart
-_ACTIVE_MODE_SEC: int = 300  # 5 min of activity = active polling mode
-
-# Auto-start background consciousness (creator's policy: always on by default)
-try:
-    _consciousness.start()
-    log.info("🧠 Background consciousness auto-started (default: always on)")
-except Exception as e:
-    log.warning("consciousness auto-start failed: %s", e)
-
-while True:
-    loop_started_ts = time.time()
-    rotate_chat_log_if_needed(DRIVE_ROOT)
-    ensure_workers_healthy()
-
-    # Drain worker events
-    event_q = get_event_q()
+async def background_maintenance():
+    """Фоновое обслуживание: workers, очереди, heartbeat (без Telegram polling)."""
+    last_heartbeat = time.time()
     while True:
-        try:
-            evt = event_q.get_nowait()
-        except _queue_mod.Empty:
-            break
-        dispatch_event(evt, _event_ctx)
+        await asyncio.sleep(1)  # небольшая пауза, чтобы не грузить процессор
 
-    enforce_task_timeouts()
-    enqueue_evolution_task_if_needed()
-    assign_tasks()
-    persist_queue_snapshot(reason="main_loop")
+        # Ротация логов и проверка здоровья воркеров
+        rotate_chat_log_if_needed(DRIVE_ROOT)
+        ensure_workers_healthy()
 
-    _now = time.time()
-    # Poll Telegram — adaptive: fast when active, long-poll when idle
-    _active = (_now - _last_message_ts) < _ACTIVE_MODE_SEC
-    _poll_timeout = 0 if _active else 10
-    try:
-        updates = TG.get_updates(offset=offset, timeout=_poll_timeout)
-    except Exception as e:
-        append_jsonl(
-            DRIVE_ROOT / "logs" / "supervisor.jsonl",
-            {
-                "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "type": "telegram_poll_error", "offset": offset, "error": repr(e),
-            },
-        )
-        time.sleep(1.5)
-        continue
-
-    for upd in updates:
-        offset = int(upd["update_id"]) + 1
-        msg = upd.get("message") or upd.get("edited_message") or {}
-        if not msg:
-            continue
-
-        chat_id = int(msg["chat"]["id"])
-        from_user = msg.get("from") or {}
-        user_id = int(from_user.get("id") or 0)
-        text = str(msg.get("text") or "")
-        caption = str(msg.get("caption") or "")
-        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-
-        # Extract image if present
-        image_data = None  # Will be (base64, mime_type, caption) or None
-        if msg.get("photo"):
-            # photo is array of PhotoSize, last one is largest
-            best_photo = msg["photo"][-1]
-            file_id = best_photo.get("file_id")
-            if file_id:
-                b64, mime = TG.download_file_base64(file_id)
-                if b64:
-                    image_data = (b64, mime, caption)
-        elif msg.get("document"):
-            doc = msg["document"]
-            mime_type = str(doc.get("mime_type") or "")
-            if mime_type.startswith("image/"):
-                file_id = doc.get("file_id")
-                if file_id:
-                    b64, mime = TG.download_file_base64(file_id)
-                    if b64:
-                        image_data = (b64, mime, caption)
-
-        st = load_state()
-        if st.get("owner_id") is None:
-            st["owner_id"] = user_id
-            st["owner_chat_id"] = chat_id
-            st["last_owner_message_at"] = now_iso
-            save_state(st)
-            log_chat("in", chat_id, user_id, text)
-            send_with_budget(chat_id, "✅ Owner registered. Ouroboros online.")
-            continue
-
-        # if user_id != int(st.get("owner_id")):
-        #     continue
-
-        log_chat("in", chat_id, user_id, text)
-        st["last_owner_message_at"] = now_iso
-        _last_message_ts = time.time()
-        save_state(st)
-
-        # --- Supervisor commands ---
-        if text.strip().lower().startswith("/"):
+        # Обработка событий из очереди воркеров
+        event_q = get_event_q()
+        while True:
             try:
-                result = _handle_supervisor_command(text, chat_id, tg_offset=offset)
-                if result is True:
-                    continue  # terminal command, fully handled
-                elif result:  # non-empty string = dual-path note
-                    text = result + text  # prepend note, fall through to LLM
-            except SystemExit:
-                raise
-            except Exception:
-                log.warning("Supervisor command handler error", exc_info=True)
+                evt = event_q.get_nowait()
+            except _queue_mod.Empty:
+                break
+            # Для упрощения: создаём контекст событий (можно вынести в отдельную функцию)
+            ctx = types.SimpleNamespace(
+                DRIVE_ROOT=DRIVE_ROOT, REPO_DIR=REPO_DIR,
+                BRANCH_DEV=BRANCH_DEV, BRANCH_STABLE=BRANCH_STABLE,
+                TG=TG, WORKERS=WORKERS, PENDING=PENDING, RUNNING=RUNNING,
+                MAX_WORKERS=MAX_WORKERS,
+                send_with_budget=send_with_budget,
+                load_state=load_state, save_state=save_state,
+                update_budget_from_usage=update_budget_from_usage,
+                append_jsonl=append_jsonl,
+                enqueue_task=enqueue_task, cancel_task_by_id=cancel_task_by_id,
+                queue_review_task=queue_review_task,
+                persist_queue_snapshot=persist_queue_snapshot,
+                safe_restart=safe_restart,
+                kill_workers=kill_workers, spawn_workers=spawn_workers,
+                sort_pending=sort_pending,
+                consciousness=_consciousness,
+            )
+            dispatch_event(evt, ctx)
 
-        # All other messages (and dual-path commands) → direct chat with Ouroboros
-        if not text and not image_data:
-            continue  # empty message, skip
+        enforce_task_timeouts()
+        enqueue_evolution_task_if_needed()
+        assign_tasks()
+        persist_queue_snapshot(reason="main_loop")
 
-        # Feed observation to consciousness
-        _consciousness.inject_observation(f"Owner message: {text[:100]}")
+        # Heartbeat логирование
+        now = time.time()
+        if DIAG_HEARTBEAT_SEC > 0 and (now - last_heartbeat) >= DIAG_HEARTBEAT_SEC:
+            workers_total = len(WORKERS)
+            workers_alive = sum(1 for w in WORKERS.values() if w.proc.is_alive())
+            append_jsonl(
+                DRIVE_ROOT / "logs" / "supervisor.jsonl",
+                {
+                    "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    "type": "main_loop_heartbeat",
+                    "workers_total": workers_total,
+                    "workers_alive": workers_alive,
+                    "pending_count": len(PENDING),
+                    "running_count": len(RUNNING),
+                    "event_q_size": _safe_qsize(event_q),
+                    "running_task_ids": list(RUNNING.keys())[:5],
+                    "spent_usd": load_state().get("spent_usd"),
+                },
+            )
+            last_heartbeat = now
 
-        agent = _get_chat_agent()
+async def main():
+    """Запускаем aiogram‑бота и фоновое обслуживание параллельно."""
+    # Задача обслуживания (воркеры, очереди, эволюция)
+    maintenance_task = asyncio.create_task(background_maintenance())
+    # Задача Telegram‑бота
+    telegram_task = asyncio.create_task(run_telegram_aiogram())
+    # Ждём обе задачи (они работают бесконечно)
+    await asyncio.gather(maintenance_task, telegram_task)
 
-        if agent._busy:
-            # BUSY PATH: inject into active conversation (single consumer)
-            if image_data:
-                if text:
-                    agent.inject_message(text)
-                send_with_budget(chat_id, "📎 Photo received, but a task is in progress. Send again when I'm free.")
-            elif text:
-                agent.inject_message(text)
-
-        else:
-            # FREE PATH: batch-collect burst messages, then dispatch (single consumer)
-            # Batch-collect burst messages: wait briefly for follow-up messages
-            # This prevents "do X" → "cancel" race conditions
-            _BATCH_WINDOW_SEC = 1.5  # collect messages for 1500ms
-            _EARLY_EXIT_SEC = 0.15   # if no burst within 150ms → dispatch immediately
-            _batch_start = time.time()
-            _batch_deadline = _batch_start + _BATCH_WINDOW_SEC
-            _batched_texts = [text] if text else []
-            _batched_image = image_data  # keep first image
-
-            _batch_state = load_state()
-            _batch_state_dirty = False
-            while time.time() < _batch_deadline:
-                time.sleep(0.1)
-                try:
-                    _extra_updates = TG.get_updates(offset=offset, timeout=0) or []
-                except Exception:
-                    _extra_updates = []
-                if not _extra_updates and (time.time() - _batch_start) < _EARLY_EXIT_SEC:
-                    # No follow-up messages in first 150ms → single message, dispatch immediately
-                    break
-                for _upd in _extra_updates:
-                    offset = max(offset, int(_upd.get("update_id", offset - 1)) + 1)
-                    _msg2 = _upd.get("message") or _upd.get("edited_message") or {}
-                    _uid2 = (_msg2.get("from") or {}).get("id")
-                    _cid2 = (_msg2.get("chat") or {}).get("id")
-                    _txt2 = _msg2.get("text") or _msg2.get("caption") or ""
-                    # if _uid2 and _batch_state.get("owner_id") and _uid2 == int(_batch_state["owner_id"]):
-                    if _uid2:
-                        log_chat("in", _cid2, _uid2, _txt2)
-                        _batch_state["last_owner_message_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-                        _batch_state_dirty = True
-                        # Handle supervisor commands in batch window
-                        if _txt2.strip().lower().startswith("/"):
-                            try:
-                                _cmd_result = _handle_supervisor_command(_txt2, _cid2, tg_offset=offset)
-                                if _cmd_result is True:
-                                    continue  # terminal command, don't batch
-                                elif _cmd_result:
-                                    _txt2 = _cmd_result + _txt2  # dual-path: prepend note
-                            except SystemExit:
-                                raise
-                            except Exception:
-                                log.warning("Supervisor command in batch failed", exc_info=True)
-                        if _txt2:
-                            _batched_texts.append(_txt2)
-                            _batch_deadline = max(_batch_deadline, time.time() + 0.3)  # extend for burst
-                        if not _batched_image:
-                            _doc2 = _msg2.get("document") or {}
-                            _photo2 = (_msg2.get("photo") or [None])[-1] or {}
-                            _fid2 = _photo2.get("file_id") or _doc2.get("file_id")
-                            if _fid2:
-                                _b642, _mime2 = TG.download_file_base64(_fid2)
-                                if _b642:
-                                    _batched_image = (_b642, _mime2, _txt2)
-
-            # Save state once if mutated during batch window
-            if _batch_state_dirty:
-                save_state(_batch_state)
-
-            # Merge all batched texts into one message
-            if len(_batched_texts) > 1:
-                final_text = "\n\n".join(_batched_texts)
-                log.info("Message batch: %d messages merged into one", len(_batched_texts))
-            elif _batched_texts:
-                final_text = _batched_texts[0]
-            else:
-                final_text = text  # fallback to original
-
-            # Re-check if agent became busy during batch window (race condition fix)
-            if agent._busy:
-                if final_text:
-                    agent.inject_message(final_text)
-                if _batched_image:
-                    send_with_budget(chat_id, "📎 Photo received, but a task is in progress. Send again when I'm free.")
-            else:
-                # Dispatch to direct chat handler
-                _consciousness.pause()
-                def _run_task_and_resume(cid, txt, img):
-                    try:
-                        handle_chat_direct(cid, txt, img)
-                    finally:
-                        _consciousness.resume()
-                _t = threading.Thread(
-                    target=_run_task_and_resume,
-                    args=(chat_id, final_text, _batched_image),
-                    daemon=True,
-                )
-                try:
-                    _t.start()
-                except Exception as _te:
-                    log.error("Failed to start chat thread: %s", _te)
-                    _consciousness.resume()  # ensure resume if thread fails to start
-
-    st = load_state()
-    st["tg_offset"] = offset
-    save_state(st)
-
-    now_epoch = time.time()
-    loop_duration_sec = now_epoch - loop_started_ts
-
-    if DIAG_SLOW_CYCLE_SEC > 0 and loop_duration_sec >= float(DIAG_SLOW_CYCLE_SEC):
-        append_jsonl(
-            DRIVE_ROOT / "logs" / "supervisor.jsonl",
-            {
-                "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "type": "main_loop_slow_cycle",
-                "duration_sec": round(loop_duration_sec, 3),
-                "pending_count": len(PENDING),
-                "running_count": len(RUNNING),
-            },
-        )
-
-    if DIAG_HEARTBEAT_SEC > 0 and (now_epoch - _last_diag_heartbeat_ts) >= float(DIAG_HEARTBEAT_SEC):
-        workers_total = len(WORKERS)
-        workers_alive = sum(1 for w in WORKERS.values() if w.proc.is_alive())
-        append_jsonl(
-            DRIVE_ROOT / "logs" / "supervisor.jsonl",
-            {
-                "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "type": "main_loop_heartbeat",
-                "offset": offset,
-                "workers_total": workers_total,
-                "workers_alive": workers_alive,
-                "pending_count": len(PENDING),
-                "running_count": len(RUNNING),
-                "event_q_size": _safe_qsize(event_q),
-                "running_task_ids": list(RUNNING.keys())[:5],
-                "spent_usd": st.get("spent_usd"),
-            },
-        )
-        _last_diag_heartbeat_ts = now_epoch
-
-    # Short sleep in active mode (fast response), longer when idle (save CPU)
-    _loop_sleep = 0.1 if (_now - _last_message_ts) < _ACTIVE_MODE_SEC else 0.5
-    time.sleep(_loop_sleep)
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Shutting down Ouroboros...")
+        kill_workers()
+        sys.exit(0)
