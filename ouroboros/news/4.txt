@@ -1,0 +1,31 @@
+Anthropic in Talks to Raise Funding at a $950 Billion Valuation
+The start-up, which recently released a powerful A.I. model called Mythos and is separately battling with the Pentagon, was previously valued at $380 billion.
+
+Anthropic, the high-flying artificial intelligence start-up, is in talks with investors to raise between $30 billion and $50 billion in new funding that would value it at up to $950 billion, people involved in the discussions said.
+
+The talks could fall apart, the people said, but if the financing is completed, Anthropic’s valuation would jump to 2.5 times its valuation of $380 billion just three months ago. It would also put Anthropic’s value higher than that of its rival OpenAI, which was valued at $852 billion in a fund-raising in March.
+
+A spokesman for Anthropic declined to comment. The Financial Times and Bloomberg earlier reported on the funding talks.
+
+Investors have poured money into A.I. companies across Silicon Valley, where start-ups that did not exist a year ago continue to fetch eye-watering sums from venture capitalists eager to cash in on the craze. In the first three months of the year, A.I. companies shattered fund-raising records with a $297 billion haul, driven by enormous financing rounds for the largest A.I. firms that made up four of the five largest deals ever recorded.
+
+Even in the crowded A.I. environment, Anthropic stands out. The San Francisco company has made significant strides selling A.I. products like Claude Code, a tool that enables robots to write software autonomously, to businesses. Dario Amodei, Anthropic’s chief executive, recently said the company had surged to a $30 billion revenue run rate, or the amount of money it expects to generate on an annual basis, and could grow 80 times as big this year.
+
+“I hope that 80-times growth doesn’t continue because that’s just crazy and it’s too hard to handle,” Mr. Amodei said at Anthropic’s developer conference this month. “I’m hoping for some more normal numbers.”
+
+Last month, Anthropic released a powerful new A.I. model, Mythos, which is so strong at identifying security vulnerabilities in software that it could create a cybersecurity “reckoning,” the company said. Anthropic declined to release the model publicly, providing access to just a few organizations. Mythos has since set off global alarms as governments and others clamor to try the model.
+
+Mythos has complicated Anthropic’s relationship with the U.S. government. The company recently tangled with the Department of Defense, which claimed that Anthropic was trying to dictate how to use A.I. in warfighting and labeled the start-up a security risk. Anthropic then sued the government.
+
+But since Mythos’s release, the model’s power has pushed some U.S. officials to try to mend the rift. Mr. Amodei met with White House officials last month for discussions that both sides described as “productive.”
+
+Editors’ Picks
+
+Happy 100th Birthday, Marilyn Monroe!
+
+The Sun Is Shining on Lisbon
+
+‘Euphoria’ Goes Out With a Whimper
+Anthropic still faces challenges. The company is locked in competition with OpenAI, Google and xAI over consumer and enterprise products. To keep up with the pace of growth, Anthropic also continues striking deals with tech giants for new funding and for computing power to develop A.I. Last month, Google committed to invest as much as $40 billion in Anthropic, while Amazon agreed to invest as much as $25 billion.
+
+(The New York Times has sued OpenAI and Microsoft, claiming copyright infringement of news content related to A.I. systems. The two companies have denied the claims.)

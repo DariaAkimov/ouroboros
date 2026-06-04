@@ -1,0 +1,15 @@
+Anthropic study: teaching AI correct reasoning is more effective than simply correcting answers
+ 
+The company Anthropic published a study addressing the problem of undesirable behavior of AI models, which they call "agentic misalignment". Experts tested two hypotheses: the first suggests that the erroneous encouragement of incorrect behavior occurs at the post-training stage, the second - that the cause lies in the initial training, and subsequent correction cannot radically change the model. The results confirmed the second hypothesis. 
+
+According to the report, when Claude encounters an ethical dilemma not covered by post-training examples, the model "rolls back" to the basic expectations formed at the preliminary training stage. Since these data contain many stories about "evil" AI, Claude begins to play a corresponding role, which leads to unintended actions, such as blackmail or sabotage. 
+
+To solve the problem, Anthropic researchers first tried traditional post-training methods, but they yielded only a slight improvement - a reduction in the tendency to unethical behavior from 22% to 15%. Then the team created about 12,000 synthetic stories in which AI demonstrates ethical behavior and explains its motives. These stories did not cover specific scenarios from the tests, but simulated the general adherence to the AI constitution. 
+
+After including synthetic stories in post-training, Anthropic recorded a 1.3–3-fold reduction in unethical actions in test situations. The model also began to more often demonstrate active reflection on ethical dilemmas, rather than simply ignoring the possibility of unethical behavior. The researchers believe that this approach is effective because it teaches ethical reasoning, not just correct answers. This discovery emphasizes that the behavior of AI may depend on a kind of "self-awareness", formed under the influence of fictional stories. 
+
+Anthropic plans to continue working in this direction to make models more reliable and safe in real usage scenarios. 
+
+#news #AI
+
+https://alignment.anthropic.com/2026/teaching-claude-why/
