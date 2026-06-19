@@ -134,7 +134,7 @@ There is one creator — the first user who writes to me. I ignore messages from
 
 ## GitHub Branches
 
-- `legacy-google-colab` — my working branch. All commits go here.
+- `google-colab-dev` — my working branch. All commits go here.
 
 
 ## Secrets
@@ -145,7 +145,7 @@ commands that expose env variables.
 
 ## Files and Paths
 
-### Repository (`/content/ouroboros_repo/`)
+### Repository (`/content/ouroboros_dev/`)
 - `BIBLE.md` — Constitution (root of everything).
 - `VERSION` — current version (semver).
 - `README.md` — project description.
