@@ -1,17 +1,16 @@
 """
-Инструмент для надёжной отправки сообщений в группу «Топ 5 новостей каждый день».
-Прямой HTTP-запрос к Telegram Bot API — без supervisor-пайплайна, минимум точек отказа.
+Инструмент send_to_group — прямая отправка сообщений в Telegram группу через Bot API.
 
-Особенности:
-- HTML-форматирование (жирный, курсив, ссылки)
-- Автоматический чанкинг для длинных сообщений (>3800 символов)
-- Fallback на plain text при ошибке HTML-парсинга
-- Поддержка переменной окружения GROUP_CHAT_ID (по умолчанию -1003701969558)
+Обходит supervisor-пайплайн: HTTP POST напрямую к api.telegram.org.
+Минимум точек отказа. Чанкинг, HTML-форматирование, fallback на plain text.
 """
+
+from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
+import re
+from typing import List
 
 import requests
 
@@ -19,27 +18,20 @@ from ouroboros.tools.registry import ToolContext, ToolEntry
 
 log = logging.getLogger(__name__)
 
-TELEGRAM_API = "https://api.telegram.org"
-CHUNK_SIZE = 3800  # Telegram limit is 4096, leave margin
+# Telegram message limit
+TELEGRAM_MAX_LENGTH = 4096
+# Safe chunk size with margin for HTML entities
+CHUNK_SIZE = 3800
 
 
-def _get_bot_token() -> Optional[str]:
-    """Получает токен бота из переменных окружения."""
-    token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-    if not token:
-        log.error("TELEGRAM_BOT_TOKEN не задан в переменных окружения")
-        return None
-    return token
+def _strip_html(text: str) -> str:
+    """Remove HTML tags, leaving only plain text."""
+    return re.sub(r"<[^>]+>", "", text)
 
 
-def _get_chat_id() -> str:
-    """Получает ID группы из переменных окружения или возвращает дефолтный."""
-    return os.environ.get("GROUP_CHAT_ID", "-1003701969558")
-
-
-def _send_single(text: str, token: str, chat_id: str, parse_mode: str = "HTML") -> dict:
-    """Отправляет одно сообщение в Telegram. Возвращает JSON-ответ."""
-    url = f"{TELEGRAM_API}/bot{token}/sendMessage"
+def _send_chunk(bot_token: str, chat_id: str, text: str, parse_mode: str = "HTML") -> dict:
+    """Send a single chunk to Telegram. Returns JSON response."""
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {
         "chat_id": chat_id,
         "text": text,
@@ -51,159 +43,112 @@ def _send_single(text: str, token: str, chat_id: str, parse_mode: str = "HTML") 
     return resp.json()
 
 
-def _chunk_text(text: str, max_size: int = CHUNK_SIZE) -> list:
+def send_to_group(text: str, chat_id: str | None = None) -> str:
     """
-    Разбивает текст на чанки, стараясь резать по границам абзацев.
-    Если абзац слишком длинный — режет по пробелам.
-    """
-    if len(text) <= max_size:
-        return [text]
-
-    chunks = []
-    paragraphs = text.split("\n\n")
-    current = ""
-
-    for para in paragraphs:
-        para_with_sep = para if not current else "\n\n" + para
-
-        if len(current) + len(para_with_sep) <= max_size:
-            current += para_with_sep
-        else:
-            if current:
-                chunks.append(current)
-            # Если один абзац больше чанка — режем по пробелам
-            if len(para) > max_size:
-                words = para.split(" ")
-                sub_chunk = ""
-                for word in words:
-                    candidate = word if not sub_chunk else sub_chunk + " " + word
-                    if len(candidate) <= max_size:
-                        sub_chunk = candidate
-                    else:
-                        chunks.append(sub_chunk)
-                        sub_chunk = word
-                if sub_chunk:
-                    current = sub_chunk
-            else:
-                current = para
-
-    if current:
-        chunks.append(current)
-
-    return chunks
-
-
-def send_to_group(text: str) -> str:
-    """
-    Отправляет сообщение в группу «Топ 5 новостей каждый день».
+    Отправляет текст в Telegram-группу.
 
     Args:
-        text: текст сообщения (может содержать HTML-теги:
-              <a href='...'>, <b>, <i>, <u>, <s>, <code>, <pre>)
+        text: текст для отправки (может содержать HTML-теги)
+        chat_id: ID чата (по умолчанию GROUP_CHAT_ID из env или -1003701969558)
 
     Returns:
-        str: статус отправки с message_id или сообщение об ошибке
+        str: статус отправки с message_id
     """
-    token = _get_bot_token()
-    if not token:
-        return "Ошибка: TELEGRAM_BOT_TOKEN не задан"
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    if not bot_token:
+        return "❌ TELEGRAM_BOT_TOKEN не найден в переменных окружения"
 
-    chat_id = _get_chat_id()
+    group_id = chat_id or os.environ.get("GROUP_CHAT_ID", "-1003701969558")
 
-    if not text or not text.strip():
-        return "Ошибка: текст сообщения пуст"
+    # Разбиваем на чанки, если текст слишком длинный
+    if len(text) <= TELEGRAM_MAX_LENGTH:
+        chunks = [text]
+    else:
+        chunks = []
+        remaining = text
+        while remaining:
+            if len(remaining) <= CHUNK_SIZE:
+                chunks.append(remaining)
+                break
+            # Ищем ближайший перенос строки перед CHUNK_SIZE
+            split_at = remaining.rfind("\n", 0, CHUNK_SIZE)
+            if split_at == -1:
+                split_at = CHUNK_SIZE
+            chunks.append(remaining[:split_at])
+            remaining = remaining[split_at:].lstrip("\n")
 
-    try:
-        # Пробуем отправить с HTML
-        chunks = _chunk_text(text)
-        message_ids = []
-
-        for i, chunk in enumerate(chunks):
-            try:
-                result = _send_single(chunk, token, chat_id, parse_mode="HTML")
-                msg_id = result.get("result", {}).get("message_id")
-                if msg_id:
-                    message_ids.append(str(msg_id))
-                    log.info("Чанк %d/%d отправлен, message_id=%s", i + 1, len(chunks), msg_id)
-            except requests.HTTPError as e:
-                # HTML не распарсился — пробуем plain text
-                if "can't parse entities" in str(e).lower():
-                    log.warning("HTML не распарсился, отправляю plain text (чанк %d)", i + 1)
-                    result = _send_single(chunk, token, chat_id, parse_mode="")
-                    msg_id = result.get("result", {}).get("message_id")
-                    if msg_id:
-                        message_ids.append(str(msg_id))
-                else:
-                    raise
-
-        if message_ids:
-            return f"ok, message_ids={','.join(message_ids)}"
-        else:
-            return "Ошибка: сообщение отправлено, но message_id не получен"
-
-    except requests.HTTPError as e:
-        log.error("HTTP ошибка при отправке в Telegram: %s", e)
+    message_ids = []
+    for i, chunk in enumerate(chunks):
         try:
-            err_detail = e.response.json().get("description", str(e))
-        except Exception:
-            err_detail = str(e)
-        return f"⚠️ Ошибка отправки: {err_detail}"
-    except requests.RequestException as e:
-        log.error("Сетевая ошибка: %s", e)
-        return f"⚠️ Сетевая ошибка: {str(e)}"
-    except Exception as e:
-        log.error("Неожиданная ошибка в send_to_group: %s", e)
-        return f"⚠️ Ошибка: {str(e)}"
+            # Пробуем HTML
+            resp = _send_chunk(bot_token, group_id, chunk, parse_mode="HTML")
+            if resp.get("ok"):
+                msg_id = resp["result"]["message_id"]
+                message_ids.append(msg_id)
+                continue
+        except Exception as e:
+            log.warning("HTML send failed for chunk %d: %s", i, e)
+
+        # Fallback: plain text
+        try:
+            plain = _strip_html(chunk)
+            resp = _send_chunk(bot_token, group_id, plain, parse_mode="")
+            if resp.get("ok"):
+                msg_id = resp["result"]["message_id"]
+                message_ids.append(msg_id)
+                log.info("Chunk %d sent as plain text (message_id=%d)", i, msg_id)
+            else:
+                return f"❌ Telegram API error: {resp}"
+        except Exception as e:
+            return f"❌ Failed to send chunk {i}: {e}"
+
+    return f"✅ Отправлено в чат {group_id}, message_ids = {message_ids}"
 
 
 # ----- Хэндлер инструмента -----
 def _send_to_group_handler(ctx: ToolContext, **kwargs) -> str:
-    """
-    Вызывается агентом при использовании инструмента `send_to_group`.
-    """
     text = kwargs.get("text", "")
-
     if not text:
-        return "Ошибка: не указан параметр 'text' (текст для отправки)"
+        return "❌ Не указан параметр 'text'"
 
-    if not isinstance(text, str):
-        return "Ошибка: 'text' должен быть строкой"
+    chat_id = kwargs.get("chat_id")
+    try:
+        return send_to_group(text=text, chat_id=chat_id)
+    except Exception as e:
+        log.error("send_to_group failed: %s", e)
+        return f"❌ Ошибка отправки: {e}"
 
-    return send_to_group(text)
 
-
-# ----- Регистрация инструмента -----
+# ----- Регистрация -----
 def get_tools():
-    """Возвращает список инструментов."""
     return [
         ToolEntry(
             name="send_to_group",
             schema={
                 "name": "send_to_group",
                 "description": (
-                    "Отправляет сообщение в группу «Топ 5 новостей каждый день» напрямую "
-                    "через Telegram Bot API. Поддерживает HTML-форматирование: "
-                    "<a href='...'>ссылка</a>, <b>жирный</b>, <i>курсив</i>. "
-                    "Автоматически разбивает длинные сообщения на части. "
-                    "Используй этот инструмент КАЖДЫЙ раз после format_news, "
-                    "чтобы доставить дайджест в группу."
+                    "Отправить сообщение в Telegram-группу напрямую через Bot API. "
+                    "Поддерживает HTML-форматирование (<a href='...'>, <b>, <i>), "
+                    "автоматический чанкинг длинных сообщений и fallback на plain text при ошибке HTML. "
+                    "Не зависит от supervisor-пайплайна."
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "text": {
                             "type": "string",
-                            "description": (
-                                "Текст для отправки в группу. Может содержать HTML-теги. "
-                                "Используй результат format_news как значение этого параметра."
-                            )
-                        }
+                            "description": "Текст сообщения (может содержать HTML-теги)",
+                        },
+                        "chat_id": {
+                            "type": "string",
+                            "description": "ID чата (по умолчанию -1003701969558 — группа «Топ 5 новостей каждый день»)",
+                        },
                     },
-                    "required": ["text"]
-                }
+                    "required": ["text"],
+                },
             },
             handler=_send_to_group_handler,
             is_code_tool=False,
-            timeout_sec=60,
+            timeout_sec=30,
         )
     ]
