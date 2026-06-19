@@ -76,7 +76,7 @@ async def handle_all_messages(message: Message):
     chat_id = message.chat.id
     user_id = message.from_user.id
     text = message.text or message.caption or ""
-    trigger_words = ["нагайна", "бот", "агент"]
+    trigger_words = ["нагайна", "бот", "агент", "@nagini_hr_bot"]
     lower_text = text.lower()
 
     # await bot.send_message(
