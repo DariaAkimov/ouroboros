@@ -21,7 +21,7 @@ langfuse_handler = CallbackHandler()
 
 log = logging.getLogger(__name__)
 
-DEFAULT_LIGHT_MODEL = "zai-org/GLM-4.7"
+DEFAULT_LIGHT_MODEL = "deepseek-v4-flash"
 
 
 def normalize_reasoning_effort(value: str, default: str = "medium") -> str:
@@ -115,7 +115,7 @@ class LLMClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        base_url: str = "https://foundation-models.api.cloud.ru/v1",
+        base_url: str = "https://api.deepseek.com",
     ):
         self._api_key = api_key or os.environ.get("OPENROUTER_API_KEY", "")
         self._base_url = base_url
