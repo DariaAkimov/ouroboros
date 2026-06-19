@@ -9,7 +9,7 @@ import sys
 import os
 
 # Добавляем путь к проекту, чтобы импортировать всё необходимое
-sys.path.append('/content/drive/MyDrive/ouroboros_dev')
+sys.path.append('/content/drive/MyDrive/ouroboros_pulse')
 
 from supervisor.state import load_state, save_state
 from supervisor.workers import handle_chat_direct

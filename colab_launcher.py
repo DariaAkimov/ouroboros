@@ -173,8 +173,8 @@ if str(ANTHROPIC_API_KEY or "").strip():
 if not pathlib.Path("/content/drive/MyDrive").exists():
     drive.mount("/content/drive")
 
-DRIVE_ROOT = pathlib.Path("/content/drive/MyDrive/Ouroboros").resolve()
-REPO_DIR = pathlib.Path("/content/drive/MyDrive/ouroboros_dev").resolve()
+DRIVE_ROOT = pathlib.Path("/content/drive/MyDrive/Ouroboros_Pulse").resolve()
+REPO_DIR = pathlib.Path("/content/drive/MyDrive/ouroboros_pulse").resolve()
 
 for sub in ["state", "logs", "memory", "index", "locks", "archive"]:
     (DRIVE_ROOT / sub).mkdir(parents=True, exist_ok=True)
