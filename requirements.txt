@@ -3,3 +3,8 @@ openai>=1.0.0
 requests
 playwright
 playwright-stealth
+aiogram
+langfuse
+langchain
+langchain-perplexity
+snscrape
