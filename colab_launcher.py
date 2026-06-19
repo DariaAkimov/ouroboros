@@ -51,8 +51,27 @@ install_apply_patch()
 # ----------------------------
 # 1) Secrets + runtime config
 # ----------------------------
-from google.colab import userdata  # type: ignore
+# from google.colab import userdata  # type: ignore
 from google.colab import drive  # type: ignore
+
+try:
+    from google.colab import userdata
+except ImportError:
+    # Для старых версий используем другой метод
+    import getpass
+    import os
+    
+    # Эмуляция userdata через переменные окружения или ввод
+    class UserData:
+        def get(self, key):
+            # Вариант 1: через переменные окружения
+            value = os.environ.get(key)
+            if value is None:
+                # Вариант 2: запросить ввод
+                value = input(f"Enter value for {key}: ")
+            return value
+    
+    userdata = UserData()
 
 _LEGACY_CFG_WARNED: Set[str] = set()
 

@@ -10,8 +10,27 @@ import subprocess
 import sys
 from typing import Optional
 
-from google.colab import userdata  # type: ignore
+# from google.colab import userdata  # type: ignore
 from google.colab import drive  # type: ignore
+
+try:
+    from google.colab import userdata
+except ImportError:
+    # Для старых версий используем другой метод
+    import getpass
+    import os
+    
+    # Эмуляция userdata через переменные окружения или ввод
+    class UserData:
+        def get(self, key):
+            # Вариант 1: через переменные окружения
+            value = os.environ.get(key)
+            if value is None:
+                # Вариант 2: запросить ввод
+                value = input(f"Enter value for {key}: ")
+            return value
+    
+    userdata = UserData()
 
 
 def get_secret(name: str, required: bool = False) -> Optional[str]:
