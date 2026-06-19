@@ -112,7 +112,7 @@ class ToolRegistry:
             if modname.startswith("_") or modname == "registry":
                 continue
             try:
-                stop_tools_list = ["git", "github", "shell"]
+                stop_tools_list = ["111"]
                 if modname not in stop_tools_list:
                     mod = importlib.import_module(f"ouroboros.tools.{modname}")
                 if hasattr(mod, "get_tools"):
