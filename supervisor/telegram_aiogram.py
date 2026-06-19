@@ -7,6 +7,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 import sys
 import os
+from datetime import datetime, timedelta
 
 # Добавляем путь к проекту, чтобы импортировать всё необходимое
 sys.path.append('/content/drive/MyDrive/ouroboros_dev')
@@ -72,7 +73,16 @@ async def handle_all_messages(message: Message):
     Основной обработчик для всех сообщений.
     Срабатывает, если нет команды или это не чат с владельцем.
     """
-
+    # Проверка времени сообщения
+    current_time = datetime.now().astimezone()
+    message_time = message.date
+    time_diff = current_time - message_time
+    # print(f"----TIME----\n\ncurrent_time:{ current_time}\nmessage_time: {message_time}\ntime_diff:{time_diff}")
+    
+    # Если сообщение старше 5 минут (300 секунд) - игнорируем
+    if time_diff > timedelta(minutes=2):
+        return
+    
     chat_id = message.chat.id
     user_id = message.from_user.id
     text = message.text or message.caption or ""
