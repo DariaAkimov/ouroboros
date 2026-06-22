@@ -8,5 +8,3 @@ langfuse
 langchain
 langchain-perplexity
 snscrape
-yadisk
-fpdf2
