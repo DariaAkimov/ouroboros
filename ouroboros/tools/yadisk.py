@@ -54,7 +54,7 @@ def upload_pdf_on_disk(upload_file_path: str, upload_file_name: str) -> str:
         if not upload_file_name.lower().endswith('.pdf'):
             return "Ошибка: файл должен иметь расширение .pdf"
         
-        remote_path = f"/Reports 2026 YTD (sep)/{upload_file_name}"
+        remote_path = f"/news_translation/{upload_file_name}"
         
         log.info("Загрузка файла: %s -> %s", upload_file_path, remote_path)
         y.upload(upload_file_path, remote_path)
