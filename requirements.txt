@@ -8,3 +8,7 @@ langfuse
 langchain
 langchain-perplexity
 snscrape
+pandas>=1.5
+numpy>=1.23
+openpyxl>=3.0
+scikit-learn>=1.1
