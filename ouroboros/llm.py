@@ -21,7 +21,7 @@ langfuse_handler = CallbackHandler()
 
 log = logging.getLogger(__name__)
 
-DEFAULT_LIGHT_MODEL = "zai-org/GLM-4.7"
+DEFAULT_LIGHT_MODEL = "deepseek-ai/DeepSeek-V4-Pro"
 
 
 def normalize_reasoning_effort(value: str, default: str = "medium") -> str:
